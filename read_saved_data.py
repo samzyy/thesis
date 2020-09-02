@@ -5,9 +5,11 @@ import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import threading
 
-#Flags
+#Note: Press 'x' key to pause plot -> click any other key to unpause 
+#or click 'x' again to step through
+
+#Flag to pause
 pause = 0
 
 def handle_close(event):
@@ -15,15 +17,15 @@ def handle_close(event):
 
 def press(event):
 	global pause
-	if event.key == 'x':
-		pause = not(pause)
-		print("PAUSE")
+	if event.key:
+		pause = 1
 
 def tlvHeaderDecode(data):
 	tlvType, tlvLength = struct.unpack('2I', data)
 	return tlvType, tlvLength
 
 def parseDetectedObjects(data, tlvLength, ax, timestamp):
+	global pause
 	objects = [[], [], [], []]
 	for i in range(0, tlvLength, 16):
 		x, y, z, vel = struct.unpack('4f', data[i:i + 16])
@@ -40,6 +42,9 @@ def parseDetectedObjects(data, tlvLength, ax, timestamp):
 			transform=ax.transAxes)
 	plt.pause(0.1)
 	plt.draw()
+	if pause == 1:
+		pause = 0
+		plt.waitforbuttonpress()
 
 def tlvHeader(data, ax):
 	counter = 0
