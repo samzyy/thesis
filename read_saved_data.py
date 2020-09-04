@@ -6,13 +6,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-#Note: Press 'x' key to pause plot -> click any other key to unpause 
-#or click 'x' again to step through
+#Note: 
+# In plot = 1 and step = 0 mode:
+# Press 'x' key to pause plot and click 'x' again to step through
+# Click any other key to unpause
 
-#Flag to pause
+# In plot = 1 and step = 1 mode:
+# Press any key to step through the plot
+
+# In plot = 0 mode:
+# Program runs analysis much faster without plot
+# Look at terminal for results
+
+#Flags
 pause = 0
 left = 0
 framesPassed = 0
+plot = 1
+step = 0
 
 def handle_close(event):
     exit()
@@ -29,8 +40,7 @@ def tlvHeaderDecode(data):
 #9 cars passed in 20 senconds left lane
 
 def filter_cars(objects):
-	global left
-	global framesPassed
+	global left, framesPassed
 	counter = 0
 	#Filter out stationary objects
 	for i in range(len(objects)):
@@ -45,7 +55,7 @@ def filter_cars(objects):
 	for i in range(len(objects)):
 		if objects[i][3] > 0:
 			leftLane.append(objects[i])
-		elif objects[i][0] < 0:
+		elif objects[i][3] < 0:
 			rightLane.append(objects[i])
 	count = 0
 	leftLane.sort(key=lambda x: x[1])
@@ -66,41 +76,42 @@ def filter_cars(objects):
 
 	for i in range(len(leftLane)):
 		if leftLane[i][1] < 10:
-			if framesPassed == 0 or framesPassed > 10:
+			if framesPassed == 0 or framesPassed > 15:
 				left += 1
 				framesPassed = 0
 	framesPassed += 1
 
 	print("NUM OF LEFT CARS:", left)
 	
-
 	return objects
 
 
 def parseDetectedObjects(data, tlvLength, ax, timestamp):
-	global pause
-	global left
+	global pause, left
 	objects = []
 	for i in range(0, tlvLength, 16):
 		x, y, z, vel = struct.unpack('4f', data[i:i + 16])
 		objects.append([x, y, z, vel])
-	ax.clear()
-	ax.axis([-25, 25, 0, 50])
-	for n in filter_cars(objects):
-		ax.plot(n[0], n[1], 'bo', markersize=3)
-	# for n in objects:
-	# 	if n[3] != 0:
-	# 		print("x =", n[0], "y =", n[1], "z =", n[2],"vel =", vel)
-	# 		ax.plot(n[0], n[1], 'bo', markersize=3)
-	plt.text(0.5, 0.95, "Timestamp: " + str(timestamp), 
-			horizontalalignment='center', verticalalignment='center', 
-			transform=ax.transAxes)
-	plt.text(0.2, 0.7, "Cars pass in left lane: " + str(left), 
-			horizontalalignment='center', verticalalignment='center', 
-			transform=ax.transAxes)
-	plt.pause(0.1)
-	plt.draw()
-	#press(1)
+	if plot:
+		ax.clear()
+		ax.axis([-25, 25, 0, 50])
+		for n in filter_cars(objects):
+			if n[3] > 0:
+				ax.plot(n[0], n[1], 'bo', markersize=3)
+			if n[3] < 0:
+				ax.plot(n[0], n[1], 'ro', markersize=3)
+		plt.text(0.5, 0.95, "Timestamp: " + str(timestamp), 
+				horizontalalignment='center', verticalalignment='center', 
+				transform=ax.transAxes)
+		plt.text(0.2, 0.7, "Cars pass in left lane: " + str(left), 
+				horizontalalignment='center', verticalalignment='center', 
+				transform=ax.transAxes)
+		plt.pause(0.1)
+		plt.draw()
+	else:
+		filter_cars(objects)
+	if plot and step:
+		press(1)
 	if pause == 1:
 		pause = 0
 		plt.waitforbuttonpress()
@@ -136,14 +147,30 @@ def tlvHeader(data, ax):
 				pendingBytes -= (8+tlvLength)
 			data = data[pendingBytes:]
 
-if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print("Usage: parseTLV.py inputFile.bin")
+def argument_check(argv):
+	global plot, step
+	if not(len(argv) == 2 or len(argv) == 4):
+		print("Usage: parseTLV.py inputFile.bin --optional [plot step]")
 		sys.exit()
+	if len(argv) == 4:
+		try:
+			plot = int(argv[2])
+			step = int(argv[3])
+			if not((plot == 0 or plot == 1) and (step == 0 or step == 1)):
+				raise ValueError()
+		except Exception as e:
+			print("Invalid plot or step value")
+			sys.exit()
 
+if __name__ == "__main__":
+	argument_check(sys.argv)
 	#Open data file for reading
 	fileName = sys.argv[1]
-	rawDataFile = open(fileName, "rb")
+	try:
+		rawDataFile = open(fileName, "rb")
+	except:
+		print("Invalid data file")
+		sys.exit()
 	rawData = rawDataFile.read()
 	rawDataFile.close()
 	magic = b'\x02\x01\x04\x03\x06\x05\x08\x07'
@@ -151,9 +178,13 @@ if __name__ == "__main__":
 	rawData = rawData[offset:]
 
 	#Generate plot
-	plt.ion()
-	fig, ax = plt.subplots()
-	fig.canvas.mpl_connect('close_event', handle_close)
-	fig.canvas.mpl_connect('key_press_event', press)
+	if plot:
+		plt.ion()
+		fig, ax = plt.subplots()
+		fig.canvas.mpl_connect('close_event', handle_close)
+		fig.canvas.mpl_connect('key_press_event', press)
+	else:
+		#Dummy variable
+		ax = 1
 
 	tlvHeader(rawData, ax)
