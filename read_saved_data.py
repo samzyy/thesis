@@ -21,7 +21,9 @@ import time
 #Flags
 pause = 0
 left = 0
-framesPassed = 0
+right = 0
+framesPassedLeft = 0
+framesPassedRight = 0
 plot = 1
 step = 0
 
@@ -40,7 +42,7 @@ def tlvHeaderDecode(data):
 #9 cars passed in 20 senconds left lane
 
 def filter_cars(objects):
-	global left, framesPassed
+	global left, right, framesPassedLeft, framesPassedRight
 	counter = 0
 	#Filter out stationary objects
 	for i in range(len(objects)):
@@ -57,13 +59,20 @@ def filter_cars(objects):
 			leftLane.append(objects[i])
 		elif objects[i][3] < 0:
 			rightLane.append(objects[i])
-	count = 0
+	countLeft = 0
+	countRight = 0
 	leftLane.sort(key=lambda x: x[1])
 	for i in range(len(leftLane)):
 		if leftLane[i][1] < 10:
-			count += 1
-	for i in reversed(range(1, count)):
+			countLeft += 1
+	for i in reversed(range(1, countLeft)):
 		leftLane.pop(i)
+
+	for i in range(len(rightLane)):
+		if rightLane[i][1] < 10:
+			countRight += 1
+	for i in reversed(range(1, countRight)):
+		rightLane.pop(i)
 	
 	objects = leftLane + rightLane
 	display = objects
@@ -76,12 +85,26 @@ def filter_cars(objects):
 
 	for i in range(len(leftLane)):
 		if leftLane[i][1] < 10:
-			if framesPassed == 0 or framesPassed > 15:
+			if left == 0:
 				left += 1
-				framesPassed = 0
-	framesPassed += 1
+				framesPassedLeft = 0
+			elif framesPassedLeft > 15:
+				left += 1
+				framesPassedLeft = 0
+	framesPassedLeft += 1
+
+	for i in range(len(rightLane)):
+		if rightLane[i][1] < 10:
+			if right == 0:
+				right += 1
+				framesPassedRight = 0
+			if framesPassedRight > 10:
+				right += 1
+				framesPassedRight = 0
+	framesPassedRight += 1
 
 	print("NUM OF LEFT CARS:", left)
+	print("NUM OF RIGHT CARS:", right)
 	
 	return objects
 
@@ -104,6 +127,9 @@ def parseDetectedObjects(data, tlvLength, ax, timestamp):
 				horizontalalignment='center', verticalalignment='center', 
 				transform=ax.transAxes)
 		plt.text(0.2, 0.7, "Cars pass in left lane: " + str(left), 
+				horizontalalignment='center', verticalalignment='center', 
+				transform=ax.transAxes)
+		plt.text(0.2, 0.6, "Cars pass in right lane: " + str(right), 
 				horizontalalignment='center', verticalalignment='center', 
 				transform=ax.transAxes)
 		plt.pause(0.1)
