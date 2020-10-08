@@ -178,8 +178,16 @@ if __name__ == "__main__":
 	while 1:
 		data = dataPort.read(32)
 		if not(data):
-			print("Error in serial connection. Please try again.")
-			exit()
+			print("Reconnecting..")
+			CLIport.close()
+			dataPort.close()
+			CLIport = serial.Serial('COM4', 115200)
+			dataPort = serial.Serial('COM3', 921600, timeout=0.1)
+			config = [line.rstrip('\r\n') for line in open(configFile)]
+			for i in config:
+				CLIport.write((i+'\n').encode())
+				time.sleep(0.01)
+			continue
 		offset = data.find(magic)
 		if offset != -1:
 			if found == 1:
