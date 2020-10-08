@@ -10,7 +10,7 @@ os.chdir(sys.path[0])
 
 # Change the configuration file name
 # configFileName = 'AWR1843config.cfg'
-configFileName = 'Demo.cfg'
+configFileName = 'config.cfg'
 
 CLIport = {}
 Dataport = {}

@@ -96,28 +96,31 @@ def parseDetectedObjects(data, tlvLength, ax, timestamp):
 	global left, right
 	objects = []
 	for i in range(0, tlvLength, 16):
-		x, y, z, vel = struct.unpack('4f', data[i:i + 16])
-		objects.append([x, y, z, vel])
-		ax.clear()
-		ax.axis([-25, 25, 0, 50])
-		# for n in filter_cars(objects):
-		# 	if n[3] > 0:
-		# 		ax.plot(n[0], n[1], 'bo', markersize=3)
-		# 	if n[3] < 0:
-		# 		ax.plot(n[0], n[1], 'ro', markersize=3)
-		# plt.text(0.5, 0.95, "Timestamp: " + str(timestamp), 
-		# 		horizontalalignment='center', verticalalignment='center', 
-		# 		transform=ax.transAxes)
-		# plt.text(0.2, 0.7, "Cars pass in left lane: " + str(left), 
-		# 		horizontalalignment='center', verticalalignment='center', 
-		# 		transform=ax.transAxes)
-		# plt.text(0.2, 0.6, "Cars pass in right lane: " + str(right), 
-		# 		horizontalalignment='center', verticalalignment='center', 
-		# 		transform=ax.transAxes)
-		for n in objects:
-			ax.plot(n[0], n[1], 'bo', markersize=3)
-		plt.pause(0.1)
-		plt.draw()
+		try:
+			x, y, z, vel = struct.unpack('4f', data[i:i + 16])
+			objects.append([x, y, z, vel])
+		except:
+			return
+	ax.clear()
+	ax.axis([-5, 5, 0, 10])
+	# for n in filter_cars(objects):
+	# 	if n[3] > 0:
+	# 		ax.plot(n[0], n[1], 'bo', markersize=3)
+	# 	if n[3] < 0:
+	# 		ax.plot(n[0], n[1], 'ro', markersize=3)
+	# plt.text(0.5, 0.95, "Timestamp: " + str(timestamp), 
+	# 		horizontalalignment='center', verticalalignment='center', 
+	# 		transform=ax.transAxes)
+	# plt.text(0.2, 0.7, "Cars pass in left lane: " + str(left), 
+	# 		horizontalalignment='center', verticalalignment='center', 
+	# 		transform=ax.transAxes)
+	# plt.text(0.2, 0.6, "Cars pass in right lane: " + str(right), 
+	# 		horizontalalignment='center', verticalalignment='center', 
+	# 		transform=ax.transAxes)
+	for n in objects:
+		ax.plot(n[0], n[1], 'bo', markersize=3)
+	plt.pause(0.001)
+	plt.draw()
 
 def tlvHeader(data, ax):
 	counter = 0
@@ -127,16 +130,13 @@ def tlvHeader(data, ax):
 			magic, version, length, platform, frameNum, cpuCycles, numObj, numTLVs = struct.unpack('Q7I', data[:headerLength])
 		except:
 			print("Improper TLV structure found: ", data)
-			break
+			return
 		counter += 1
 		timestamp = str(datetime.timedelta(milliseconds=counter * 100))
 		if len(timestamp) > 7:
 			timestamp = timestamp[:9]
 		else:
 			timestamp = timestamp + ".0"
-		# print("Frame Number: ", counter)
-		# print("Timestamp:", timestamp)
-		# print("Detect Obj:\t%d "%(numObj))
 		if version > 0x01000005: 
 			headerLength = 40
 			pendingBytes = length - headerLength
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 	# Windows
 	try:
 		CLIport = serial.Serial('COM4', 115200)
-		dataPort = serial.Serial('COM3', 921600)
+		dataPort = serial.Serial('COM3', 921600, timeout=0.1)
 	except:
 		print("Can't connect to serial ports.")
 		exit()
@@ -173,13 +173,21 @@ if __name__ == "__main__":
 	plt.ion()
 	fig, ax = plt.subplots()
 	fig.canvas.mpl_connect('close_event', handle_close)
-
+	buffer = bytearray()
+	found = 0
 	while 1:
-		data = dataPort.read(dataPort.in_waiting)
-		if data:
-			offset = data.find(magic)
-			if offset != -1:
-				data = data[offset:]
-				tlvHeader(data, ax)
+		data = dataPort.read(32)
+		if not(data):
+			print("Error in serial connection. Please try again.")
+			exit()
+		offset = data.find(magic)
+		if offset != -1:
+			if found == 1:
+				tlvHeader(bytes(buffer), ax)
+				buffer = bytearray()
+			else:
+				found = 1
+		if found:
+			buffer.extend(data)
 
 

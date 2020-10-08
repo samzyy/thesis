@@ -132,7 +132,7 @@ def parseDetectedObjects(data, tlvLength, ax, timestamp):
 		plt.text(0.2, 0.6, "Cars pass in right lane: " + str(right), 
 				horizontalalignment='center', verticalalignment='center', 
 				transform=ax.transAxes)
-		plt.pause(0.1)
+		plt.pause(0.05)
 		plt.draw()
 	else:
 		filter_cars(objects)
