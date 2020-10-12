@@ -51,18 +51,13 @@ def filter_cars(objects):
 
 	objects.sort(key=lambda x: x[0])
 	leftLane = []
-	rightLane = []
 	#Categorise vechicles into left and right lanes based on velocity
 	for i in range(len(objects)):
 		if objects[i][3] > 0:
 			leftLane.append(objects[i])
-		elif objects[i][3] < 0:
-			rightLane.append(objects[i])
 	countLeft = 0
-	countRight = 0
 	#Sort left lane by objects closest to the radar (y axis)
 	leftLane.sort(key=lambda x: x[1])
-	rightLane.sort(key=lambda x: x[1])
 	#Count the number of objects detected close to the radar
 	for i in range(len(leftLane)):
 		if leftLane[i][1] < 10:
@@ -70,15 +65,8 @@ def filter_cars(objects):
 	#Remove redundant detected objects close to radar (only need 1)
 	for i in reversed(range(1, countLeft)):
 		leftLane.pop(i)
-
-	#Do the same for the right lane
-	for i in range(len(rightLane)):
-		if rightLane[i][1] < 10:
-			countRight += 1
-	for i in reversed(range(1, countRight)):
-		rightLane.pop(i)
 	
-	objects = leftLane + rightLane
+	objects = leftLane
 	#Printing detected objects (after removing redundant objects)
 	display = objects
 	for i in range(len(display)):
@@ -89,7 +77,8 @@ def filter_cars(objects):
 	print(display)
 
 	for i in range(len(leftLane)):
-		if leftLane[i][1] < 10:
+        #Multiple lanes travelling in the same direction - so need to separate by distance
+		if leftLane[i][1] < 10 and leftLane[i][0] < 3:
 			if left == 0:
 				left += 1
 				framesPassedLeft = 0
@@ -98,17 +87,6 @@ def filter_cars(objects):
 				left += 1
 				framesPassedLeft = 0
 	framesPassedLeft += 1
-
-	for i in range(len(rightLane)):
-		if rightLane[i][1] < 10:
-			if right == 0:
-				right += 1
-				framesPassedRight = 0
-			#Wait 10 frames for object to disappear out of y = 10 threshold
-			if framesPassedRight > 10:
-				right += 1
-				framesPassedRight = 0
-	framesPassedRight += 1
 
 	print("NUM OF LEFT CARS:", left)
 	print("NUM OF RIGHT CARS:", right)
