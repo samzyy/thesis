@@ -3,7 +3,6 @@ import sys
 import math
 import datetime
 import matplotlib.pyplot as plt
-import numpy as np
 import time
 
 # Note: 
@@ -60,7 +59,7 @@ def filter_cars(objects):
 			rightLane.append(objects[i])
 	countLeft = 0
 	countRight = 0
-	#Sort left lane by objects closest to the radar (y axis)
+	#Sort left and right lane by objects closest to the radar (y axis)
 	leftLane.sort(key=lambda x: x[1])
 	rightLane.sort(key=lambda x: x[1])
 	#Count the number of objects detected close to the radar
@@ -81,6 +80,7 @@ def filter_cars(objects):
 	objects = leftLane + rightLane
 	#Printing detected objects (after removing redundant objects)
 	display = objects
+	print("Detect Obj (After Processing): {}".format(len(objects)))
 	for i in range(len(display)):
 		display[i][0] = round(display[i][0], 2)
 		display[i][1] = round(display[i][1], 2)
@@ -89,7 +89,7 @@ def filter_cars(objects):
 	print(display)
 
 	for i in range(len(leftLane)):
-		if leftLane[i][1] < 10:
+		if leftLane[i][1] < 10 and leftLane[i][0] < 3:
 			if left == 0:
 				left += 1
 				framesPassedLeft = 0
@@ -110,8 +110,8 @@ def filter_cars(objects):
 				framesPassedRight = 0
 	framesPassedRight += 1
 
-	print("NUM OF LEFT CARS:", left)
-	print("NUM OF RIGHT CARS:", right)
+	print("NUM OF LEFT VEHICLES:", left)
+	print("NUM OF RIGHT VEHICLES:", right)
 	
 	return objects
 
@@ -124,10 +124,13 @@ def parseDetectedObjects(data, tlvLength, ax, timestamp):
 	if plot:
 		ax[0].clear()
 		ax[1].clear()
-		ax[0].set_title("Raw data")
-		ax[1].set_title("Filtered data")
+		ax[0].set_title("Original data")
+		ax[1].set_title("Processed data")
 		ax[0].axis([-25, 25, 0, 50])
 		ax[1].axis([-10, 20, 0, 50])
+		ax[0].set_xlabel("Distance along lateral axis (metres)")
+		ax[1].set_xlabel("Distance along lateral axis (metres)")
+		ax[0].set_ylabel("Distance along longitudinal axis (metres)")
 		for n in objects:
 			ax[0].plot(n[0], n[1], 'bo', markersize=3)
 		for n in filter_cars(objects):
@@ -192,7 +195,7 @@ def tlvHeader(data, ax):
 def argument_check(argv):
 	global plot, step
 	if not(len(argv) == 2 or len(argv) == 4):
-		print("Usage: read_saved_data.py inputFile.bin --optional [plot step]")
+		print("Usage: read_saved_data.py data_file.dat --optional [plot step]")
 		sys.exit()
 	if len(argv) == 4:
 		try:
@@ -213,21 +216,25 @@ if __name__ == "__main__":
 	except:
 		print("Invalid data file")
 		sys.exit()
-	rawData = rawDataFile.read()
+	data = rawDataFile.read()
 	rawDataFile.close()
 	magic = b'\x02\x01\x04\x03\x06\x05\x08\x07'
-	offset = rawData.find(magic)
-	rawData = rawData[offset:]
+	offset = data.find(magic)
+	data = data[offset:]
 
 	#Generate plot
 	if plot:
 		plt.ion()
 		fig, ax = plt.subplots(1, 2, figsize=(15,8))
-		fig.tight_layout()
+		plt.tight_layout()
+		plt.gcf().subplots_adjust(bottom=0.07)
+		plt.gcf().subplots_adjust(top=0.95)
+		plt.gcf().subplots_adjust(right=0.95)
+		plt.gcf().subplots_adjust(left=0.05)
 		fig.canvas.mpl_connect('close_event', handle_close)
 		fig.canvas.mpl_connect('key_press_event', press)
 	else:
 		#Dummy variable
 		ax = 1
 
-	tlvHeader(rawData, ax)
+	tlvHeader(data, ax)
