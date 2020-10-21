@@ -5,7 +5,7 @@ Please run the programs with the command line arguments as demonstrated below:
 
 read_saved_data.py data_file.dat
 
-live_read.py config_fig.cfg
+live_read.py config_file.cfg
 
 For the live_read.py you might have to manually change the COM ports in the source code.
 
